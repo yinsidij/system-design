@@ -1,0 +1,65 @@
+https://www.youtube.com/watch?v=iuqZvajTOyA
+Notes:
+
+Consistency
+    Distributed cache favors performance and availability over consistency.
+    What leads to inconsistency.
+    1. replicate data asynchronously to have a better performance. (get from master node might be different from replica)
+    2. Cache clients have a different list of cache. (one cache client writes values while no other client can read)
+    Solution: synchronous replication and make sure all clients share a single view of the cache servers list.
+    Tradeoff: increase latency and overall complexity of the system.
+
+Data expiration
+    Cache is full --> LRU
+    Cache is not full --> items may become stale
+    Two common approaches how expired items are cleaned up from cache
+    1. Passive cleanup: when some client tries to access it, and the item is found to be expired.
+    2. Active cleanup: a maintenance thread that runs at regular intervals and removes expired items.
+       Concerns:
+       - billions of items in the cache, we cannot simply iterate over all cache items.
+       Solution:
+       - use some probabilistic algorithms wen several random items are tested with every run
+
+
+Local and remote cache
+    Services that use distributed (or remote) cache, often use local cache as well.
+    If data is not found in the local cache, call to the distributed cache is initiated.
+    When cache client instance is created, we also construct a local cache.
+    Local cache
+    1. LRU cache implementation
+    2. 3rd party implementations, for example Guava cache.
+
+Security
+    1. not expose cache servers directly to the internet. Firewalls
+    2. only approved clients can access the cache.
+    3. Clients may also encrypt data
+    But we should expect performance implications.
+
+Monitoring and logging
+    details of every request to the cache
+    who and when accessed the cache, what was the key and return status
+    1. number of faults while calling the cache
+    2. latency
+    3. number of hits and misses
+    4. CPU and memory utilization on cache hosts
+    5. network I/O. With regards
+
+Cache client should be very simple
+    1.  One idea is to introduce a proxy, that will sit between cache clients and cache servers
+        will be responsible for picking a cache shard.
+        Example: twemproxy project, created by Twitter.  
+    2.  make cache servers responsible for picking a shard.
+        - Client sends request to a random cache serve
+        - Cache server applies consistent hashing and redirects request to the shard that stores the data
+        Example: Redis cluster
+
+Consistent hashing algorithm is great: Simple and effective.
+Two major flaws: 
+    1. domino effect 
+      - transfer load of failed server to next
+      - one server failure would cause a chain reaction of failures
+    2. cache servers do not split the circle evenly.
+      Solution:
+      1. add each server on the circle multiple times.
+      2  Jump Hash algorithm (Google, 2014)
+      3. proportional hashing (Yahoo!)
