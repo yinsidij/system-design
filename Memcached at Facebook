@@ -1,0 +1,77 @@
+Memcached at Facebook
+https://www.youtube.com/watch?v=Myp8z0ybdzM
+https://research.fb.com/wp-content/uploads/2016/11/scaling-memcache-at-facebook.pdf
+
+Notes:
+
+Read(k)
+  v=get(k)
+  if v is nil
+    v = fetch from DB
+    set(k,v)
+
+Write(k,v)
+  send k,v to DB
+  delete(k) //DB sends delete to memcached
+            //DB sends update to DB2 in other region (EAST)
+            //DB2 sends delete its memcached
+
+What if 
+1. In above Write(k,v), delete(k) from memcached first and then update DB
+  t1 delete(k)
+  t2     <--------- Other client might read, cach miss, read from stale data from DB
+  t3 send to DB
+  
+2.
+send k,v to DB
+set(k,v) // not delete(k)
+It would cause things wrong.
+Example
+C1: x=1 --> DB
+                    C2: x=2 --> DB
+                    C2: set(x,2)
+C2: set(x,1)
+
+Thundering herd problem
+  FrontEnd(FE)
+  FE0-FEN get hot key from memcached, FEX tries to modify this key
+  FEX updates DB and delete this key from memcached
+  All get requests from FE0-FEN hit DB
+
+  FE0
+  FE1
+  FE2              Memcached              DB
+  ..
+  FEN
+  FEX
+
+  LEASE
+  FE0 sends request to memcached with key, cache miss, 
+      but lease token (l) is registred in memcached,
+      memcached returns the lease token (l) to FE0;
+  FE1-FEN sends request to memcached with same key,
+      because of lease token exist in memcached, FE1-FEN are asked
+      to wait
+  FE0 ask DB for data, and sends put(k,v,l) to memcached
+  Memcached will reissues read for all FE1-FEN
+
+  Bottom line
+  Only one request to DB with help of lease
+
+  What if memcached server down,
+  there are gutter server.. redirect FE to gutter memcached servers
+
+Race
+Write after read
+  C1: get(v) -- miss
+  C1: read from DB --> v1
+    C2: write k=v2 to --> DB
+    C2: delete(k)
+  C1: set(k,v1)
+  
+Solution by LEASE
+  C1: get(v) -- miss, lease token l is registrated in memcached
+  C1: read from DB --> v1
+    C2: write k=v2 to --> DB
+    C2: delete(k), invalidate lease l
+  C1: set(k,v1,l) // if l is invalidated, set is ignored
