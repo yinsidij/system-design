@@ -1,0 +1,26 @@
+https://www.youtube.com/watch?v=BKZxZwUgL3Y&t=690s
+
+URL Frontier
+                      Front Queue                                                      Back Queue
+
+              1 ()____________________()                                        1 ()____________________()
+              2 ()____________________()                                        2 ()____________________()
+              ...                                                               ...
+Prioritizer   ...                                 Back Queue Router             ...                           Back Queue Selector  <-----URL---->  Worker (Fetcher+Renderer) 
+              F ()____________________()                                        B ()____________________()
+              
+              Each Queue with different priority (F to 1)                       Each Queue with same host names
+              Implementing priority                                             Implementing politeness
+                                                                                Number of Back Queues == Number of Workers
+              
+                                                                                Host          BackQueueID
+                                                                                digital.com      3
+                                                                                yelp.com         9
+                                                                                youtube.com      13
+                                                                                
+                                                                                
+1. One worker only works on one backe queue
+2. Back Queue Router collects URL from Front Queue with same host names and inserts to one Back Queue 
+  (highest priority first, lowest priority last)
+3. Back Queue Router shall ensure Back Queue alwasy be non-empty
+  - Monitor each Back Queue's size, pull from Front Queue
