@@ -1,0 +1,43 @@
+https://www.youtube.com/watch?v=vHQqQBYJtLI
+API Gateway
+  Act as a guard for any request to web applications
+  
+Feature#1 
+Separate out cross cutting concerns
+-- Authentication
+    Authentication is the process of identifying users and validating who they claim to be.
+-- Authorization
+    Authorization happens after a user’s identity has been successfully authenticated.
+    It is about offering full or partial access rights to resources like database, funds, and other critical information to get the job done.
+-- SSL termination
+-- DDoS protection / Throttling
+
+Feature#2 
+Seperate and consolidate cross cutting concerns across microservices
+-- Routing 
+
+Feature#3 
+Replacing multiple client calls with single API call.
+Some features of reverse proxy
+-- Serving static content
+-- Caching responses
+
+Feature#4
+Routing based on headers, paths and params etc.
+Some features of load balancer component
+-- Load Balancing
+-- A/B testing
+-- Canary release
+
+Example
+Self Managed
+-- Apache
+-- HAProxy
+-- NGINX
+-- Spring Cloud Gateway
+
+Cloud Services
+-- AWS API Gateway
+-- Azure API Gateway
+-- Google Cloud Endpoints
+-- Apigee
