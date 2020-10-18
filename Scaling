@@ -1,0 +1,93 @@
+https://www.youtube.com/watch?v=hnpzNAPiC0E&t=2342s
+Scaling Instagram Infrastructure
+
+Two kinds of Servers: Storage and Computing
+Storage:  store globl data
+          needs to be consistent across mutiple data centers with replication
+          with some latency but eventual consistency
+          
+Computing: driven by user traffic, as neede basis
+           stateless
+           data is temp, could be restructed by global data
+           
+Scale out (Storge)
+PostgreSQL: user, media, friendship etc
+    Read from local region
+    Write across region
+
+        Django --------Read---------> Replica
+          |                             /|\        DC1
+    ------|------------------------------|-------------------
+          |------------Write-------->  Master
+          |                              |         DC2
+    ------|-----------------------------\|/-------------------
+          |------------Read---------> Replica
+                                                   DC3
+
+    Address latency in write: by batching request whenever possible
+
+Cassandra: user feeds, activities etc
+Cassandra has no master
+Consistency can be configured by application tolerance
+Example: Write -- 2
+         Read  -- 1 
+
+Scale out (Computing)
+
+                  DC1                                DC2
+          User1 writes to DB       
+                                                Replicated to DB2
+                                            
+          DB invalidate memcache1           DB2 invalidate memcache2
+
+Above solves inconsisteny issue but all requests might hit db directly.
+To solve the issue further --- memcache lease
+
+Memcache Lease
+
+time    d1    d2                        memcache    db
+ |                    lease-get
+ |      ----------------------------------->
+ |      <----------------------------------
+ |          fill (d1 has permission to db)
+ |
+ |                          lease-get
+ |             ------------------------------------->
+ |             <------------------------------------
+ |                         wait or use stale data
+ |
+ |                    d1 read from db
+ |      <--------------------------------------------
+ |      ----------------------------------->
+ |                    d1 lease-set
+ |
+ |                    d2 lease-get (hit)
+ |              <-------------------------->
+ 
+ 
+ Scale Up
+ 1. Use as few CPU instructions as possible
+    - Monitor
+    - Analyze (Python CProfile)
+    - Optimize (C is really faster)
+    -- Use C/C++ for candidate functions
+ 2. Use as few server as possible
+    Each one process has two part of memory (shared memory and private memory)
+    - Reduce code
+    -- Run in optimized mode (-O)
+    -- Remove dead code
+    - Share more
+    -- Move configuration into shared memory
+    -- Disable garbage collection
+ 3. Network latency
+    - Django processing is syncronous
+    - each process can serve only one request at one time
+    - wait for external services to respond
+    - cause server starvation and few CPU instruction executed
+
+    Solution: Use Async IO
+    -- Django -------Async IO ------ Feed
+          |----------Async IO ------ Stories
+          |----------Async IO -------Suggested Users
+    
+ 
